@@ -14,6 +14,17 @@ class Character():
         self.thought = t
         self.wonder = w
         self.charm = c
+        self.name = generateName(self.gender)
+        if (self.race == "Neka"):
+            self.move += 1
+        elif (self.race == "Golem"):
+            self.power += 1
+        elif (self.race == "Centaur"):
+            self.thought += 1
+        elif (self.race == "Human"):
+            self.wonder += 1
+        elif (self.race == "Elf"):
+            self.charm += 1
     def __str__(self):
         inv = ""
         for desc in self.inventory:
@@ -25,12 +36,15 @@ class Character():
                 inv += " > "
             inv += desc
             inv += "\n"
-        return self.name + ", " + ("Male" if self.gender == "M" else "Female") + " " + self.race + \
+        return "```\n" + self.name + ", " + ("Male" if self.gender == "M" else "Female") + " " + self.race + \
             "\n Move: " + str(self.move) + "\n Power: " + str(self.power) + "\n Thought: " + str(self.thought) + \
-            "\n Wonder: " + str(self.wonder) + "\n Charm: " + str(self.charm) + "\n\n" + \
-            "INVENTORY\n" + "G:" + str(self.gold) + " S:" + str(self.silver) + " C:" + str(self.copper) + "\n" + inv
+            "\n Wonder: " + str(self.wonder) + "\n Charm: " + str(self.charm) + "\n\n" + "INVENTORY\n" + \
+            "G:" + str(self.gold) + " S:" + str(self.silver) + " C:" + str(self.copper) + "\n" + inv + "```"
 
-def readNames():
+def read_names():
+    global firstNamesM
+    global firstNamesF
+    global lastNames
     with open("first_name_male.txt") as fnameM:
         firstNamesM = fnameM.readlines()
     with open("first_name_female.txt") as fnameF:
@@ -40,14 +54,13 @@ def readNames():
     firstNamesM = [x.strip() for x in firstNamesM]
     firstNamesF = [x.strip() for x in firstNamesF]
     lastNames = [x.strip() for x in lastNames]
-    return firstNamesM, firstNamesF, lastNames
 
-def generateName(g, mfnames, ffnames, lnames):
+def generateName(g):
     if (g == "M"):
-        fname = mfnames[random.randrange(0, len(mfnames))]
+        fname = firstNamesM[random.randrange(0, len(firstNamesM))]
     else:
-        fname = ffnames[random.randrange(0, len(ffnames))]
-    lname = lnames[random.randrange(0, len(lnames))]
+        fname = firstNamesF[random.randrange(0, len(firstNamesF))]
+    lname = lastNames[random.randrange(0, len(lastNames))]
     return fname + " " + lname
 
 def generateCurrency():
@@ -60,6 +73,7 @@ def generateCurrency():
     return gold, silver, copper
 
 def generateAbility():
+    # Very barebones...
     ability = ""
     stats = ["Move", "Power", "Thought", "Wonder", "Charm"]
     isAbility = random.randint(0, 1)
@@ -75,6 +89,7 @@ def generateAbility():
     return ability
 
 def generateConsumable():
+    # Not a super robust system, mostly a placeholder / for inspiration
     itemType = random.randint(0, 6)
     level = random.randint(1, 3)
     stats = ["Move", "Power", "Thought", "Wonder", "Charm"]
@@ -113,35 +128,25 @@ def generateConsumable():
     return consumable
 
 def generateAdventurerGear():
-    return ["Bedroll", "Rations [USES: 3]", "Waterskin", "1 Torch", "10' Rope", "Tinderbox"]
+    inv = []
+    for _ in range(3):
+        inv.append(generateAbility())
+    for _ in range(1 + random.randint(0, 1)):
+        inv.append(generateConsumable())
+    inv += ["Rations [USES: 3]", "Bedroll", "Waterskin", "1 Torch", "10' Rope", "Tinderbox"]
+    return inv
 
 def generateCharacter():
-    mf, ff, l = readNames()
-    statValues = [2, 1, 0, 0, -1]
-    random.shuffle(statValues)
-    genders = ["M", "F"]
-    gender = genders[random.randrange(0, len(genders))]
-    races = {"Neka": "Move", "Golem": "Power", "Centaur": "Thought", "Human": "Wonder", "Elf": "Charm"}
-    race, bonus = random.choice(list(races.items()))
-    stats = {
-        "Move": statValues[0],
-        "Power": statValues[1],
-        "Thought": statValues[2],
-        "Wonder": statValues[3],
-        "Charm": statValues[4]
-        }
-    stats[bonus] += 1
-    vebran = Character(race, gender, stats["Move"], stats["Power"], stats["Thought"], stats["Wonder"], stats["Charm"])
-    vebran.name = generateName(vebran.gender, mf, ff, l)
+    stats = [2, 1, 0, 0, -1]
+    random.shuffle(stats)
+    gender = "M" if random.randint(0, 1) == 1 else "F"
+    race = random.choice(["Neka", "Golem", "Centaur", "Human", "Elf"])
+    vebran = Character(race, gender, stats[0], stats[1], stats[2], stats[3], stats[4])
     vebran.gold, vebran.silver, vebran.copper = generateCurrency()
-    for _ in range(3):
-        vebran.inventory.append(generateAbility())
-    for _ in range(1 + random.randint(0, 1)):
-        vebran.inventory.append(generateConsumable())
-    vebran.inventory += generateAdventurerGear()
-    print(vebran)
+    vebran.inventory = generateAdventurerGear()
+    #print(vebran)
     return vebran
 
-
 if __name__ == "__main__":
+    read_names()
     generateCharacter()
