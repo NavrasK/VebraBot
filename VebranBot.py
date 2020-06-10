@@ -1,9 +1,9 @@
 import os, discord, random
 from discord.ext import commands
 from dotenv import load_dotenv
-import re
 
 import CharacterGenerator
+import DiceRoll
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -19,33 +19,12 @@ async def on_ready():
 @bot.command()
 async def roll(ctx, diceString:str):
     """Roll dice in NdN format"""
-    resultString = ""
-    rolls = []
     try:
-        dice = re.sub(r"\s", "", diceString).split("+")
-        for i in range(len(dice)):
-            d = dice[i]
-            if re.match(r"^\d*[dD]\d*$", d):
-                num, faces = map(int, d.split('d'))
-                tempRolls = []
-                for _ in range(num):
-                    tempRolls.append(random.randint(1, faces))
-                resultString += ("[" + ", ".join(tempRolls) + "]")
-                rolls += tempRolls
-            elif re.match(r"^\d*$", d):
-                resultString += str(d)
-                rolls.append(int(d))
-            else:
-                raise Exception("Invalid dice roll")
-            if i != len(dice):
-                resultString += " + "
-        result = 0
-        for r in rolls:
-            result += r
+        result = DiceRoll.roll(diceString)
     except Exception:
         await ctx.send("Unrecognized format")
         return
-    await ctx.send("`" + diceString + " = `" + resultString + str(result))
+    await ctx.send(ctx.message.author.mention + ": " + result)
 
 @bot.command()
 async def newchar(ctx):
@@ -57,8 +36,8 @@ async def newchar(ctx):
     await ctx.send(newVebran)
     await ctx.send(NewCharInstructions)
 
-@bot.command(pass_context=True)
+@bot.command()
 async def saymyname(ctx):
-    await ctx.send("You are " + ctx.message.author.name + " aka " + ctx.message.author.id)
+    await ctx.send("You are " + ctx.message.author.mention + " [#" + str(ctx.message.author.id) + "]")
 
 bot.run(TOKEN)
