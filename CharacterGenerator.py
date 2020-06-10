@@ -1,7 +1,6 @@
 import random
 
 class Character():
-    name = ""
     inventory = []
     gold = 0
     silver = 0
@@ -38,22 +37,56 @@ class Character():
             inv += "\n"
         return "```\n" + self.name + ", " + ("Male" if self.gender == "M" else "Female") + " " + self.race + \
             "\n Move: " + str(self.move) + "\n Power: " + str(self.power) + "\n Thought: " + str(self.thought) + \
-            "\n Wonder: " + str(self.wonder) + "\n Charm: " + str(self.charm) + "\n\n" + "INVENTORY\n" + \
+            "\n Wonder: " + str(self.wonder) + "\n Charm: " + str(self.charm) + "\n\nINVENTORY\n" + \
             "G:" + str(self.gold) + " S:" + str(self.silver) + " C:" + str(self.copper) + "\n" + inv + "```"
+
+class NPC():
+    def __init__(self, r, g, m, p, t, w, c):
+        self.race = r
+        self.gender = g
+        self.move = m
+        self.power = p
+        self.thought = t
+        self.wonder = w
+        self.charm = c
+        self.name = generateName(self.gender)
+        self.personality = generatePersonality()
+        if (self.race == "Neka"):
+            self.move += 1
+        elif (self.race == "Golem"):
+            self.power += 1
+        elif (self.race == "Centaur"):
+            self.thought += 1
+        elif (self.race == "Human"):
+            self.wonder += 1
+        elif (self.race == "Elf"):
+            self.charm += 1
+    def __str__(self):
+        pers = ""
+        for trait in self.personality:
+            pers += "> " + trait + "\n"
+        return "```\n" + self.name + ", " + ("Male" if self.gender == "M" else "Female") + " " + self.race + \
+            "\n Move: " + str(self.move) + "\n Power: " + str(self.power) + "\n Thought: " + str(self.thought) + \
+            "\n Wonder: " + str(self.wonder) + "\n Charm: " + str(self.charm) + "\n\nPERSONALITY\n" + \
+            pers + "```"
 
 def read_names():
     global firstNamesM
     global firstNamesF
     global lastNames
+    global personalities
     with open("first_name_male.txt") as fnameM:
         firstNamesM = fnameM.readlines()
     with open("first_name_female.txt") as fnameF:
         firstNamesF = fnameF.readlines()  
     with open("last_name.txt") as lname:
         lastNames = lname.readlines()
+    with open("npc_traits.txt") as traits:
+        personalities = traits.readlines()
     firstNamesM = [x.strip() for x in firstNamesM]
     firstNamesF = [x.strip() for x in firstNamesF]
     lastNames = [x.strip() for x in lastNames]
+    personalities = [x.strip() for x in personalities]
 
 def generateName(g):
     if (g == "M"):
@@ -71,6 +104,13 @@ def generateCurrency():
         silver = random.randint(0, 7)
     copper = random.randint(0, 10)
     return gold, silver, copper
+
+def generatePersonality():
+    traits = []
+    numTraits = random.randint(2,3)
+    for _ in range(numTraits):
+        traits.append(personalities[random.randrange(0, len(personalities))])
+    return traits
 
 def generateAbility():
     # Very barebones...
@@ -144,8 +184,15 @@ def generateCharacter():
     vebran = Character(race, gender, stats[0], stats[1], stats[2], stats[3], stats[4])
     vebran.gold, vebran.silver, vebran.copper = generateCurrency()
     vebran.inventory = generateAdventurerGear()
-    #print(vebran)
     return vebran
+
+def generateNPC():
+    stats = [2, 1, 0, 0, -1]
+    random.shuffle(stats)
+    gender = "M" if random.randint(0, 1) == 1 else "F"
+    race = random.choice(["Neka", "Golem", "Centaur", "Human", "Elf"])
+    npc = NPC(race, gender, stats[0], stats[1], stats[2], stats[3], stats[4])
+    return npc
 
 if __name__ == "__main__":
     read_names()
