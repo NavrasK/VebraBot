@@ -1,12 +1,18 @@
-import os, discord, random
+import os, discord, random, pymongo
 from discord.ext import commands
 from dotenv import load_dotenv
+from pymongo import MongoClient
 
 import CharacterGenerator
 import DiceRoll
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+CONNECTION = os.getenv('CLUSTER_URL')
+
+cluster = MongoClient(CONNECTION)
+db = cluster["Vebra"]
+collection = db["Player_Characters"]
 
 description = "Bot designed for the Vebra RPG"
 bot = commands.Bot(command_prefix="//", description=description)
@@ -39,5 +45,7 @@ async def newchar(ctx):
 @bot.command()
 async def saymyname(ctx):
     await ctx.send("You are " + ctx.message.author.mention + " [#" + str(ctx.message.author.id) + "]")
+
+
 
 bot.run(TOKEN)
