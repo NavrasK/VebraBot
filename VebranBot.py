@@ -1,4 +1,14 @@
-import random
+import os, discord, random
+from discord.ext import commands
+from dotenv import load_dotenv
+
+import VebraCharGen
+
+load_dotenv()
+TOKEN = os.getenv('DISCORD_TOKEN')
+
+description = "Bot designed for the Vebra RPG"
+bot = commands.Bot(command_prefix="//", description=description)
 
 class Character():
     name = ""
@@ -30,7 +40,10 @@ class Character():
             "\n Wonder: " + str(self.wonder) + "\n Charm: " + str(self.charm) + "\n\n" + \
             "INVENTORY\n" + "G:" + str(self.gold) + " S:" + str(self.silver) + " C:" + str(self.copper) + "\n" + inv
 
-def readNames():
+def read_names():
+    global firstNamesM
+    global firstNamesF
+    global lastNames
     with open("first_name_male.txt") as fnameM:
         firstNamesM = fnameM.readlines()
     with open("first_name_female.txt") as fnameF:
@@ -40,14 +53,13 @@ def readNames():
     firstNamesM = [x.strip() for x in firstNamesM]
     firstNamesF = [x.strip() for x in firstNamesF]
     lastNames = [x.strip() for x in lastNames]
-    return firstNamesM, firstNamesF, lastNames
 
-def generateName(g, mfnames, ffnames, lnames):
+def generateName(g):
     if (g == "M"):
-        fname = mfnames[random.randrange(0, len(mfnames))]
+        fname = firstNamesM[random.randrange(0, len(firstNamesM))]
     else:
-        fname = ffnames[random.randrange(0, len(ffnames))]
-    lname = lnames[random.randrange(0, len(lnames))]
+        fname = firstNamesF[random.randrange(0, len(firstNamesF))]
+    lname = lastNames[random.randrange(0, len(lastNames))]
     return fname + " " + lname
 
 def generateCurrency():
@@ -112,27 +124,17 @@ def generateConsumable():
         consumable = "Item: A valuable " + random.choice(options)
     return consumable
 
-def generateAdventurerGear():
-    return ["Bedroll", "Rations [USES: 3]", "Waterskin", "1 Torch", "10' Rope", "Tinderbox"]
-
 def generateCharacter():
-    mf, ff, l = readNames()
     statValues = [2, 1, 0, 0, -1]
     random.shuffle(statValues)
     genders = ["M", "F"]
     gender = genders[random.randrange(0, len(genders))]
     races = {"Neka": "Move", "Golem": "Power", "Centaur": "Thought", "Human": "Wonder", "Elf": "Charm"}
     race, bonus = random.choice(list(races.items()))
-    stats = {
-        "Move": statValues[0],
-        "Power": statValues[1],
-        "Thought": statValues[2],
-        "Wonder": statValues[3],
-        "Charm": statValues[4]
-        }
+    stats = {"Move": statValues[0], "Power": statValues[1], "Thought": statValues[2], "Wonder": statValues[3], "Charm": statValues[4]}
     stats[bonus] += 1
     vebran = Character(race, gender, stats["Move"], stats["Power"], stats["Thought"], stats["Wonder"], stats["Charm"])
-    vebran.name = generateName(vebran.gender, mf, ff, l)
+    vebran.name = generateName(vebran.gender)
     vebran.gold, vebran.silver, vebran.copper = generateCurrency()
     for _ in range(3):
         vebran.inventory.append(generateAbility())
@@ -142,6 +144,30 @@ def generateCharacter():
     print(vebran)
     return vebran
 
+def generateAdventurerGear():
+    return ["Bedroll", "Rations [USES: 3]", "Waterskin", "1 Torch", "10' Rope", "Tinderbox"]
 
-if __name__ == "__main__":
-    generateCharacter()
+@bot.event
+async def on_ready():
+    print("Logged in as " + bot.user.name + " [#" + str(bot.user.id) + "]")
+    read_names()
+
+@bot.command()
+async def r(ctx, dice:str):
+    """Roll dice in NdN format"""
+    try:
+        rolls, limit = map(int, dice.split('d'))
+    except Exception:
+        await ctx.send("Format must be NdN")
+        return
+    result = ", ".join(str(random.randint(1, limit)) for r in range (rolls))
+    await ctx.send(result)
+
+@bot.command()
+async def newchar(ctx):
+    """Returns a new vebran character template"""
+    newVebran = str(generateCharacter())
+    await ctx.send(newVebran)
+    # player will have to choose class, traits, relationship stats, physical appearance, and fluff / backstory
+
+bot.run(TOKEN)
