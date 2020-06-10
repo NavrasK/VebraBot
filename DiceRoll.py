@@ -3,38 +3,42 @@ import re
 
 def roll(diceString):
     resultString = ""
-    rolls = []
-    dice = re.sub(r"\s", "", diceString).split("+")
+    rolls = ""
+    dice = re.sub(r"\s", "", diceString)
+    dice = re.split(r"(\W)", dice)
     for i in range(len(dice)):
-        d = str(dice[i])
-        if re.match(r"^\d*[dD]\d+$", d):
-            num, faces = d.split('d')
-            if num == "":
+        token = dice[i]
+        if (re.match(r"^\d*[dD]\d+$", token)):
+            token = token.lower()
+            num, faces = token.split("d")
+            if num == "": 
                 num = 1
-            else:
+            else: 
                 num = int(num)
             faces = int(faces)
-            tempRolls = []
             rollString = "["
             for n in range(num):
                 val = random.randint(1, faces)
-                tempRolls.append(val)
+                rolls += str(val)
                 rollString += str(val)
-                if n != num - 1:
+                if n != num-1:
                     rollString += ", "
+                    rolls += "+"
             rollString += "]"
             resultString += rollString
-            rolls += tempRolls
-        elif re.match(r"^\d+$", d):
-            resultString += str(d)
-            rolls.append(int(d))
+        elif (re.match(r"^\d+$", token)):
+            resultString += str(token)
+            rolls += (str(token))
+            pass
+        elif (re.match(r"^[+-]$", token)):
+            resultString += " " + str(token) + " "
+            if token == "-":
+                rolls += "-"
+            else:
+                rolls += "+"
         else:
-            raise Exception("Invalid dice roll")
-        if i != len(dice) - 1:
-            resultString += " + "
-    result = 0
-    for r in rolls:
-        result += r
+            raise Exception("Invalid token: " + token)
+    result = eval(rolls)
     display = "`" + diceString + "`: " + resultString + " = **" + str(result) + "**"
     return display
 

@@ -57,8 +57,7 @@ async def register(ctx, arg:str = ""):
     if (collection.count_documents({"_id": ctx.message.author.id}) == 0):
         post = {"_id": ctx.message.author.id, 
             "Name": "", "Harm": 0,
-            "Move": 0, "Power": 0, "Thought": 0, "Wonder": 0, "Charm": 0,
-            "Gold": 0, "Silver": 0, "Copper": 0
+            "Move": 0, "Power": 0, "Thought": 0, "Wonder": 0, "Charm": 0
             }
         collection.insert_one(post)
         await ctx.send("`Registered!`")
@@ -85,27 +84,72 @@ async def find_value(ctx, key, castToString = False):
 async def set_value(ctx, key, val):
     collection.update_one({"_id": ctx.message.author.id}, {"$set": {key, val}})
 
+async def reset_value(ctx, key):
+    if (key == "Name"):
+        await set_value(ctx, key, "")
+    else:
+        await set_value(ctx, key, 0)
+    await ctx.send("`" + key + " reset`")
+
+async def roll_stat(ctx, stat):
+    pass
+
 @bot.command()
 async def name(ctx, arg:str = ""):
+    key = "Name"
+    arg = arg.strip()
     if (await check_registration(ctx)):
         if (arg == ""):
-            await ctx.send("Name: " + await find_value(ctx, "Name", True))
+            await ctx.send("Name: " + await find_value(ctx, key, True))
         elif (arg == "$RESET"):
-            await set_value(ctx, "Name", "")
-            await ctx.send("`Name reset`")
+            await reset_value(ctx, key)
         else:
             args = arg.split()
+            if (len(args) == 2 and args[0] == "="):
+                name = str(args[1])
+                await set_value(ctx, key, name)
+            else:
+                await ctx.send("`Invalid name command`")
+                return
 
 @bot.command()
 async def harm(ctx, arg:str = ""):
+    key = "Harm"
+    arg = arg.strip()
     if (await check_registration(ctx)):
         if (arg == ""):
-            await ctx.send("Harm: " + await find_value(ctx, "Harm", True))
+            await ctx.send("Harm: " + await find_value(ctx, key, True) + " / 6")
+        elif (arg == "$RESET"):
+            await reset_value(ctx, key)
+        elif (re.match(r"^\=\d+$", arg)):
+            pass
+        elif (re.match(r"^\+\d+$", arg)):
+            pass
+        elif (re.match(r"^\-\d+$", arg)):
+            pass
         else:
             args = arg.split()
+            if ((len(args) == 2 and re.match(r"^[=+-]$", args[0]) and args[1].is_integer()) or re.match(r"^[=+-]\d+", args[0])):
+                if (args[0] == "="):
+                    harm = args[1]
+                elif (args[0] == "+"):
+                    harm = await find_value(ctx, "Harm")
+                    harm += args[1]
+                elif (args[0] == "-"):
+                    harm = await find_value(ctx, "Harm")
+                    harm -= args[1]
+                if (harm > 6): harm = 6
+                if (harm < 0): harm = 0
+                await set_value(ctx, "Harm", harm)
+                await.ctx.send("`Harm set to " + str(harm) + "`")
+            else: 
+                await ctx.send("`Invalid harm command`")
+                return
 
 @bot.command()
 async def move(ctx, arg:str = ""):
+    key = "Move"
+    arg = arg.strip()
     if (await check_registration(ctx)):
         if (arg == ""):
             await ctx.send("Move: " + await find_value(ctx, "Move", True))
@@ -114,6 +158,8 @@ async def move(ctx, arg:str = ""):
 
 @bot.command()
 async def power(ctx, arg:str = ""):
+    key = "Power"
+    arg = arg.strip()
     if (await check_registration(ctx)):
         if (arg == ""):
             await ctx.send("Power: " + await find_value(ctx, "Power", True))
@@ -122,6 +168,8 @@ async def power(ctx, arg:str = ""):
 
 @bot.command()
 async def thought(ctx, arg:str = ""):
+    key = "Thought"
+    arg = arg.strip()
     if (await check_registration(ctx)):
         if (arg == ""):
             await ctx.send("Thought: " + await find_value(ctx, "Thought", True))
@@ -130,6 +178,8 @@ async def thought(ctx, arg:str = ""):
 
 @bot.command()
 async def wonder(ctx, arg:str = ""):
+    key = "Wonder"
+    arg = arg.strip()
     if (await check_registration(ctx)):
         if (arg == ""):
             await ctx.send("Wonder: " + await find_value(ctx, "Wonder", True))
@@ -138,41 +188,11 @@ async def wonder(ctx, arg:str = ""):
 
 @bot.command()
 async def charm(ctx, arg:str = ""):
+    key = "Charm"
+    arg = arg.strip()
     if (await check_registration(ctx)):
         if (arg == ""):
             await ctx.send("Charm: " + await find_value(ctx, "Charm", True))
-        else:
-            args = arg.split()
-
-@bot.command()
-async def coins(ctx, arg:str = ""):
-    if (await check_registration(ctx)):
-        if (arg == ""):
-            pass
-        else:
-            pass
-
-@bot.command()
-async def gold(ctx, arg:str = ""):
-    if (await check_registration(ctx)):
-        if (arg == ""):
-            await ctx.send("Gold: " + await find_value(ctx, "Gold", True))
-        else:
-            args = arg.split()
-
-@bot.command()
-async def silver(ctx, arg:str = ""):
-    if (await check_registration(ctx)):
-        if (arg == ""):
-            await ctx.send("Silver: " + await find_value(ctx, "Silver", True))
-        else:
-            args = arg.split()
-
-@bot.command()
-async def copper(ctx, arg:str = ""):
-    if (await check_registration(ctx)):
-        if (arg == ""):
-            await ctx.send("Copper: " + await find_value(ctx, "Copper", True))
         else:
             args = arg.split()
 
