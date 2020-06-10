@@ -12,7 +12,7 @@ CONNECTION = os.getenv('CLUSTER_URL')
 
 cluster = MongoClient(CONNECTION)
 db = cluster["Vebra"]
-collection = db["Player_Characters"]
+collection = db["Test_Database"]
 
 description = "Bot designed for the Vebra RPG"
 bot = commands.Bot(command_prefix="//", description=description)
@@ -46,6 +46,39 @@ async def newchar(ctx):
 async def saymyname(ctx):
     await ctx.send("You are " + ctx.message.author.mention + " [#" + str(ctx.message.author.id) + "]")
 
+@bot.command()
+async def register(ctx):
+    if (collection.count_documents({"_id": ctx.message.author.id}) == 0):
+        post = {"_id": ctx.message.author.id, "Name": ctx.message.author.name}
+        collection.insert_one(post)
+        await ctx.send("Registered!")
+    else:
+        await ctx.send("Already registered!")
 
+@bot.command()
+async def addfield(ctx):
+    if (collection.count_documents({"_id": ctx.message.author.id}) == 0):
+        await ctx.send("User is not registered yet!")
+    else:
+        collection.update_one({"_id": ctx.message.author.id}, {"$set": {"SecondaryField": "I AM HERE!"}})
+        await ctx.send("Field added")
+
+@bot.command()
+async def changefield(ctx):
+    if (collection.count_documents({"_id": ctx.message.author.id}) == 0):
+        await ctx.send("User it not registered yet!")
+    else:
+        collection.update_one({"_id": ctx.message.author.id}, {"$set": {"SecondaryField": "Where did I go?"}})
+        await ctx.send("Field updated")
+
+@bot.command()
+async def whoami(ctx):
+    if (collection.count_documents({"_id": ctx.message.author.id}) == 0):
+        await ctx.send("User is not registered yet!")
+    else:
+        result = collection.find({"_id": ctx.message.author.id})
+        for val in result:
+            name = val["Name"]
+        await ctx.send(name)
 
 bot.run(TOKEN)
