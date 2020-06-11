@@ -81,12 +81,16 @@ async def register(ctx, arg:str = ""):
 
 @bot.command()
 async def character(ctx, arg:str = ""):
-    if (arg == ""):
-        if (await check_registration(ctx)):
-            pass #print players character sheet
-    else:
-        members = ctx.message.guild.members
-        print(members)
+    if (await check_registration(ctx)):
+        n = await find_value(ctx, "Name", True)
+        h = await find_value(ctx, "Harm", True)
+        m = await find_value(ctx, "Move", True)
+        p = await find_value(ctx, "Power", True)
+        t = await find_value(ctx, "Thought", True)
+        w = await find_value(ctx, "Wonder", True)
+        c = await find_value(ctx, "Charm", True)
+        await ctx.send("```Name: " + n + "\nHarm: " + h + " / 6\n Move: " + m + "\n Power: " + p + \
+            "\n Thought: " + t + "\n Wonder: " + w + "\n Charm: " + c + "```")
 
 async def check_registration(ctx, suppressOutput = False):
     if (collection.count_documents({"_id": ctx.message.author.id}) == 0):
@@ -107,8 +111,8 @@ async def find_value(ctx, key, castToString = False):
     return result
 
 async def set_value(ctx, key, val):
-    collection.update_one({"_id": ctx.message.author.id}, {"$set": {key, val}})
-    await ctx.send("`" + key + " set to " + val + "`")
+    collection.update_one({"_id": ctx.message.author.id}, {"$set": {key: val}})
+    await ctx.send("`" + key + " set to " + str(val) + "`")
 
 async def reset_value(ctx, key):
     if (key == "Name"):
