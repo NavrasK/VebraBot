@@ -12,7 +12,7 @@ CONNECTION = os.getenv('CLUSTER_URL')
 
 cluster = MongoClient(CONNECTION)
 db = cluster["Vebra"]
-collection = db["Test_Database"]
+collection = db["Player_Characters"]
 
 description = "Bot designed for the Vebra RPG"
 bot = commands.Bot(command_prefix="//", description=description)
