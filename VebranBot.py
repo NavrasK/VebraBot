@@ -23,8 +23,11 @@ async def on_ready():
     CharacterGenerator.read_names()
 
 @bot.command()
-async def roll(ctx, diceString:str = ""):
-    """Roll dice in NdN format"""
+async def roll(ctx, *diceStrings):
+    if (len(diceStrings) == 0): 
+        diceString = ""
+    else: 
+        diceString = " ".join(diceStrings)
     if (diceString == ""):
         diceString = "2d6"
     try:
@@ -36,7 +39,6 @@ async def roll(ctx, diceString:str = ""):
 
 @bot.command()
 async def generate(ctx, arg:str = ""):
-    """Returns a new vebran character template"""
     if (arg == ""):
         newVebran = str(CharacterGenerator.generateCharacter())
         NewCharInstructions = ("Fill in the class, traits, relationship stats, "
@@ -53,20 +55,43 @@ async def generate(ctx, arg:str = ""):
 
 @bot.command()
 async def register(ctx, arg:str = ""):
-    print(arg)
-    if (collection.count_documents({"_id": ctx.message.author.id}) == 0):
-        post = {"_id": ctx.message.author.id, 
-            "Name": "", "Harm": 0,
-            "Move": 0, "Power": 0, "Thought": 0, "Wonder": 0, "Charm": 0
-            }
-        collection.insert_one(post)
-        await ctx.send("`Registered!`")
-    else:
-        await ctx.send("`Already registered!`")
+    if (arg == ""):
+        if (await check_registration(ctx, True)):
+            await ctx.send("`Already registered`")
+        else:
+            post = {"_id": ctx.message.author.id, 
+                "Name": "", "Harm": 0,
+                "Move": 0, "Power": 0, "Thought": 0, "Wonder": 0, "Charm": 0
+                }
+            collection.insert_one(post)
+            await ctx.send("`Registered!`")
+    elif (arg == "$RESET"):
+        if (await check_registration(ctx)):
+            collection.delete_one({"_id": ctx.message.author.id})
+            post = {"_id": ctx.message.author.id, 
+                "Name": "", "Harm": 0,
+                "Move": 0, "Power": 0, "Thought": 0, "Wonder": 0, "Charm": 0
+                }
+            collection.insert_one(post)
+            await ctx.send("`Registration reset`")
+    elif (arg == "$DELETE"):
+        if (await check_registration(ctx)):
+            collection.delete_one({"_id": ctx.message.author.id})
+            await ctx.send("`Registration deleted`")
 
-async def check_registration(ctx):
+@bot.command()
+async def character(ctx, arg:str = ""):
+    if (arg == ""):
+        if (await check_registration(ctx)):
+            pass #print players character sheet
+    else:
+        members = ctx.message.guild.members
+        print(members)
+
+async def check_registration(ctx, suppressOutput = False):
     if (collection.count_documents({"_id": ctx.message.author.id}) == 0):
-        await ctx.send("`You're not registered yet!  Use //register first`")
+        if (suppressOutput == False):
+            await ctx.send("`You're not registered yet!  Use //register first`")
         return False
     else:
         return True
@@ -83,6 +108,7 @@ async def find_value(ctx, key, castToString = False):
 
 async def set_value(ctx, key, val):
     collection.update_one({"_id": ctx.message.author.id}, {"$set": {key, val}})
+    await ctx.send("`" + key + " set to " + val + "`")
 
 async def reset_value(ctx, key):
     if (key == "Name"):
@@ -91,12 +117,47 @@ async def reset_value(ctx, key):
         await set_value(ctx, key, 0)
     await ctx.send("`" + key + " reset`")
 
-async def roll_stat(ctx, stat):
-    pass
+async def roll_stat(ctx, stat, args):
+    if (len(args) == 0): 
+        arg = ""
+    else: 
+        arg = " ".join(args)
+    if (await check_registration(ctx)):
+        arg = arg.strip()
+        if (arg == "" or re.match(r"[+-]\d+$", arg)):
+            mod = await find_value(ctx, stat)
+            diceString="2d6" + ("-" if mod < 0 else "+") + str(abs(mod)) + arg
+            try:
+                result = DiceRoll.roll(diceString)
+            except Exception:
+                await ctx.send("`Invalid " + stat.lower() + " command`")
+                return
+            await ctx.send(ctx.message.author.mention + "> " + await find_value(ctx, "Name", True) + ": " + stat + "\n" + result)
+        elif (arg == "$RESET"):
+            await reset_value(ctx, stat)
+        else:
+            args = arg.split(" ", 1)
+            if (args[0] == "$SET"):
+                try:
+                    val = int(args[1])
+                except Exception:
+                    await ctx.send("`Invalid " + stat.lower() + " command`")
+                    return
+                await set_value(ctx, stat, val)
+            else:
+                await ctx.send("`Invalid " + stat.lower() + " command`")
+                return
+
+def clamp(n, minimum, maximum):
+    return (max(min(n, maximum), minimum))
 
 @bot.command()
-async def name(ctx, arg:str = ""):
+async def name(ctx, *args:str):
     key = "Name"
+    if (len(args) == 0): 
+        arg = ""
+    else: 
+        arg = " ".join(args)
     arg = arg.strip()
     if (await check_registration(ctx)):
         if (arg == ""):
@@ -104,8 +165,8 @@ async def name(ctx, arg:str = ""):
         elif (arg == "$RESET"):
             await reset_value(ctx, key)
         else:
-            args = arg.split()
-            if (len(args) == 2 and args[0] == "="):
+            args = arg.split(" ", 1)
+            if (args[0] == "$SET"):
                 name = str(args[1])
                 await set_value(ctx, key, name)
             else:
@@ -113,87 +174,61 @@ async def name(ctx, arg:str = ""):
                 return
 
 @bot.command()
-async def harm(ctx, arg:str = ""):
+async def harm(ctx, *args:str):
     key = "Harm"
+    if (len(args) == 0): 
+        arg = ""
+    else: 
+        arg = " ".join(args)
     arg = arg.strip()
     if (await check_registration(ctx)):
         if (arg == ""):
             await ctx.send("Harm: " + await find_value(ctx, key, True) + " / 6")
         elif (arg == "$RESET"):
             await reset_value(ctx, key)
-        elif (re.match(r"^\=\d+$", arg)):
-            pass
-        elif (re.match(r"^\+\d+$", arg)):
-            pass
-        elif (re.match(r"^\-\d+$", arg)):
-            pass
+        elif (re.match(r"^\=\s?\d+$", arg)):
+            arg = arg.strip("=")
+            harm = clamp(int(arg), 0, 6)
+            await set_value(ctx, key, harm)
+        elif (re.match(r"^\+\s?\d+$", arg)):
+            arg = arg.strip("+")
+            harm = await find_value(ctx, key)
+            harm += int(arg)
+            harm = clamp(harm, 0, 6)
+            await set_value(ctx, key, harm)
+        elif (re.match(r"^\-\s?\d+$", arg)):
+            arg = arg.strip("-")
+            harm = await find_value(ctx, key)
+            harm -= int(arg)
+            harm = clamp(harm, 0, 6)
+            await set_value(ctx, key, harm)
         else:
-            args = arg.split()
-            if ((len(args) == 2 and re.match(r"^[=+-]$", args[0]) and args[1].is_integer()) or re.match(r"^[=+-]\d+", args[0])):
-                if (args[0] == "="):
-                    harm = args[1]
-                elif (args[0] == "+"):
-                    harm = await find_value(ctx, "Harm")
-                    harm += args[1]
-                elif (args[0] == "-"):
-                    harm = await find_value(ctx, "Harm")
-                    harm -= args[1]
-                if (harm > 6): harm = 6
-                if (harm < 0): harm = 0
-                await set_value(ctx, "Harm", harm)
-                await.ctx.send("`Harm set to " + str(harm) + "`")
-            else: 
-                await ctx.send("`Invalid harm command`")
-                return
+            await ctx.send("`Invalid harm command`")
+            return
 
 @bot.command()
-async def move(ctx, arg:str = ""):
+async def move(ctx, *arg:str):
     key = "Move"
-    arg = arg.strip()
-    if (await check_registration(ctx)):
-        if (arg == ""):
-            await ctx.send("Move: " + await find_value(ctx, "Move", True))
-        else:
-            args = arg.split()
+    await roll_stat(ctx, key, arg)
 
 @bot.command()
-async def power(ctx, arg:str = ""):
+async def power(ctx, *arg:str):
     key = "Power"
-    arg = arg.strip()
-    if (await check_registration(ctx)):
-        if (arg == ""):
-            await ctx.send("Power: " + await find_value(ctx, "Power", True))
-        else:
-            args = arg.split()
+    await roll_stat(ctx, key, arg)
 
 @bot.command()
-async def thought(ctx, arg:str = ""):
+async def thought(ctx, *arg:str):
     key = "Thought"
-    arg = arg.strip()
-    if (await check_registration(ctx)):
-        if (arg == ""):
-            await ctx.send("Thought: " + await find_value(ctx, "Thought", True))
-        else:
-            args = arg.split()
+    await roll_stat(ctx, key, arg)
 
 @bot.command()
-async def wonder(ctx, arg:str = ""):
+async def wonder(ctx, *arg:str):
     key = "Wonder"
-    arg = arg.strip()
-    if (await check_registration(ctx)):
-        if (arg == ""):
-            await ctx.send("Wonder: " + await find_value(ctx, "Wonder", True))
-        else:
-            args = arg.split()
+    await roll_stat(ctx, key, arg)
 
 @bot.command()
-async def charm(ctx, arg:str = ""):
+async def charm(ctx, *arg:str):
     key = "Charm"
-    arg = arg.strip()
-    if (await check_registration(ctx)):
-        if (arg == ""):
-            await ctx.send("Charm: " + await find_value(ctx, "Charm", True))
-        else:
-            args = arg.split()
+    await roll_stat(ctx, key, arg)
 
 bot.run(TOKEN)

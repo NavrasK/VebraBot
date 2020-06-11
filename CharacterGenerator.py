@@ -41,6 +41,7 @@ class Character():
             "G:" + str(self.gold) + " S:" + str(self.silver) + " C:" + str(self.copper) + "\n" + inv + "```"
 
 class NPC():
+    personality = []
     def __init__(self, r, g, m, p, t, w, c):
         self.race = r
         self.gender = g
@@ -50,7 +51,6 @@ class NPC():
         self.wonder = w
         self.charm = c
         self.name = generateName(self.gender)
-        self.personality = generatePersonality()
         if (self.race == "Neka"):
             self.move += 1
         elif (self.race == "Golem"):
@@ -192,6 +192,7 @@ def generateNPC():
     gender = "M" if random.randint(0, 1) == 1 else "F"
     race = random.choice(["Neka", "Golem", "Centaur", "Human", "Elf"])
     npc = NPC(race, gender, stats[0], stats[1], stats[2], stats[3], stats[4])
+    npc.personality = generatePersonality()
     return npc
 
 if __name__ == "__main__":
