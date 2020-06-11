@@ -35,7 +35,7 @@ async def roll(ctx, *diceStrings):
     except Exception:
         await ctx.send("`Invalid roll command`")
         return
-    await ctx.send(ctx.message.author.mention + ": " + result)
+    await ctx.send(ctx.message.author.mention + " - " + result)
 
 @bot.command()
 async def generate(ctx, arg:str = ""):
@@ -78,6 +78,8 @@ async def register(ctx, arg:str = ""):
         if (await check_registration(ctx)):
             collection.delete_one({"_id": ctx.message.author.id})
             await ctx.send("`Registration deleted`")
+    else:
+        await ctx.send("`Invalid register command`")
 
 @bot.command()
 async def character(ctx, arg:str = ""):
@@ -110,15 +112,16 @@ async def find_value(ctx, key, castToString = False):
         result = int(result)
     return result
 
-async def set_value(ctx, key, val):
+async def set_value(ctx, key, val, suppressOutput = False):
     collection.update_one({"_id": ctx.message.author.id}, {"$set": {key: val}})
-    await ctx.send("`" + key + " set to " + str(val) + "`")
+    if (suppressOutput == False):
+        await ctx.send("`" + key + " set to " + str(val) + "`")
 
 async def reset_value(ctx, key):
     if (key == "Name"):
-        await set_value(ctx, key, "")
+        await set_value(ctx, key, "", True)
     else:
-        await set_value(ctx, key, 0)
+        await set_value(ctx, key, 0, True)
     await ctx.send("`" + key + " reset`")
 
 async def roll_stat(ctx, stat, args):
@@ -128,15 +131,16 @@ async def roll_stat(ctx, stat, args):
         arg = " ".join(args)
     if (await check_registration(ctx)):
         arg = arg.strip()
-        if (arg == "" or re.match(r"[+-]\d+$", arg)):
+        if (arg == "" or re.match(r"[+-]?\s?\d+$", arg)):
             mod = await find_value(ctx, stat)
-            diceString="2d6" + ("-" if mod < 0 else "+") + str(abs(mod)) + arg
+            diceString="2d6" + ("-" if mod < 0 else "+") + str(abs(mod)) + \
+                ("+" if (arg != "" and ("+" not in arg and "-" not in arg)) else "") + arg
             try:
                 result = DiceRoll.roll(diceString)
             except Exception:
                 await ctx.send("`Invalid " + stat.lower() + " command`")
                 return
-            await ctx.send(ctx.message.author.mention + "> " + await find_value(ctx, "Name", True) + ": " + stat + "\n" + result)
+            await ctx.send(ctx.message.author.mention + " - " + await find_value(ctx, "Name", True) + ": " + stat + "\n" + result)
         elif (arg == "$RESET"):
             await reset_value(ctx, stat)
         else:

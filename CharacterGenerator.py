@@ -109,8 +109,7 @@ def generatePersonality():
     traits = []
     numTraits = random.randint(2,3)
     for _ in range(numTraits):
-        t = personalities[random.randrange(0, len(personalities))]
-        traits.append(t)
+        traits.append(personalities[random.randrange(0, len(personalities))])
     return traits
 
 def generateAbility():
