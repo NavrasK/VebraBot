@@ -1,4 +1,4 @@
-import os, discord, random, re, pymongo
+import os, discord, random, re, pymongo, uuid
 from discord.ext import commands
 from dotenv import load_dotenv
 from pymongo import MongoClient
