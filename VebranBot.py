@@ -24,12 +24,19 @@ async def on_ready():
 
 @bot.command()
 async def roll(ctx, *diceStrings):
+    diceString = ""
     if (len(diceStrings) == 0): 
-        diceString = ""
-    else: 
-        diceString = " ".join(diceStrings)
-    if (diceString == ""):
         diceString = "2d6"
+    else:
+        if (re.search(r"^\d*[dD]\d+", diceStrings[0]) == None):
+            diceString = "2d6"
+        else:
+            diceString = diceStrings[0]
+            diceStrings = diceStrings[1:]
+        for ds in diceStrings:
+            if (re.search(r"^[-+]", ds) == None):
+                diceString += "+"
+            diceString += ds
     try:
         result = DiceRoll.roll(diceString)
     except Exception:
@@ -131,30 +138,26 @@ async def roll_stat(ctx, stat, args):
         arg = " ".join(args)
     if (await check_registration(ctx)):
         arg = arg.strip()
-        if (arg == "" or re.match(r"[+-]?\s?\d+$", arg)):
+        if (arg.split(" ", 1)[0] == "$SET"):
+            try:
+                val = int(arg.split(" ", 1)[1])
+            except Exception:
+                await ctx.send("`Invalid " + stat.lower() + " command`")
+                return
+            await set_value(ctx, stat, val)
+        elif (arg == "$RESET"):
+            await reset_value(ctx, stat)
+        else:
             mod = await find_value(ctx, stat)
+            arg = re.sub(r"\s*", "", arg)
             diceString="2d6" + ("-" if mod < 0 else "+") + str(abs(mod)) + \
-                ("+" if (arg != "" and ("+" not in arg and "-" not in arg)) else "") + arg
+                ("+" if (arg != "" and (arg[0] != "+" and arg[0] != "-")) else "") + arg
             try:
                 result = DiceRoll.roll(diceString)
             except Exception:
                 await ctx.send("`Invalid " + stat.lower() + " command`")
                 return
             await ctx.send(ctx.message.author.mention + " - " + await find_value(ctx, "Name", True) + ": " + stat + "\n" + result)
-        elif (arg == "$RESET"):
-            await reset_value(ctx, stat)
-        else:
-            args = arg.split(" ", 1)
-            if (args[0] == "$SET"):
-                try:
-                    val = int(args[1])
-                except Exception:
-                    await ctx.send("`Invalid " + stat.lower() + " command`")
-                    return
-                await set_value(ctx, stat, val)
-            else:
-                await ctx.send("`Invalid " + stat.lower() + " command`")
-                return
 
 def clamp(n, minimum, maximum):
     return (max(min(n, maximum), minimum))

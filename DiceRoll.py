@@ -1,11 +1,12 @@
-import random
-import re
+import random, re
 
 def roll(diceString):
     resultString = ""
     rolls = ""
-    dice = re.sub(r"\s", "", diceString)
-    dice = re.split(r"(\W)", dice)
+    diceString = re.sub(r"\s*", "", diceString)
+    diceString = re.sub(r"\+\+|\-\-", "+", diceString)
+    diceString = re.sub(r"\-\+|\+\-", "-", diceString)
+    dice = re.split(r"(\W)", diceString)
     for i in range(len(dice)):
         token = dice[i]
         if (re.match(r"^\d*[dD]\d+$", token)):
@@ -17,6 +18,7 @@ def roll(diceString):
                 num = int(num)
             faces = int(faces)
             rollString = "["
+            rolls += "("
             for n in range(num):
                 val = random.randint(1, faces)
                 rolls += str(val)
@@ -25,6 +27,7 @@ def roll(diceString):
                     rollString += ", "
                     rolls += "+"
             rollString += "]"
+            rolls += ")"
             resultString += rollString
         elif (re.match(r"^\d+$", token)):
             resultString += str(token)

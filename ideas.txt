@@ -1,0 +1,12 @@
+VebraBot
+Characters are stored in a separate database (_id = uuid.uuid4().hex, other columns are the same)
+Registering adds a value to a table of user ids vs. target character id (default: none)
+//register $RESET: unlinks you from your current character
+//character: prints your current character (if you have one)
+//character list: lists the names and ids of all characters in character table
+//character $DELETE [id]: deletes the character with the given id
+//character $SET [id]: links your account to the character with the given id
+//character $NEW: creates a new character and links it to your account
+//name $SET [name]
+//harm [=+-][x]
+//[stat] $SET [val]
