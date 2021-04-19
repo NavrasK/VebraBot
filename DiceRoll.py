@@ -17,6 +17,7 @@ def roll(diceString):
             else: 
                 num = int(num)
             faces = int(faces)
+            if (num > 9999 or faces > 9999): return "No"
             rollString = "["
             rolls += "("
             for n in range(num):
@@ -43,6 +44,7 @@ def roll(diceString):
             raise Exception("Invalid token: " + token)
     result = eval(rolls)
     display = "`" + diceString + "`: " + resultString + " = **" + str(result) + "**"
+    if (len(display) > 2000): display = "`" + diceString + "`: " + " = **" + str(result) + "**"
     return display
 
 if __name__ == "__main__":
