@@ -40,6 +40,12 @@ def roll(diceString):
                 rolls += "-"
             else:
                 rolls += "+"
+        elif (re.match(r"^[*/]$", token)):
+            resultString += " " + str(token) + " "
+            if token == "*":
+                rolls += "*"
+            else:
+                rolls += "/"
         else:
             raise Exception("Invalid token: " + token)
     result = eval(rolls)
