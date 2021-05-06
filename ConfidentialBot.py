@@ -18,79 +18,60 @@ description = "Bot designed for Call of Cthulhu Confidential"
 bot = commands.Bot(command_prefix="//", description=description)
 random.seed()
 
-characteristics = [
-    "STR", "strength",
-    "CON", "constitution",
-    "SIZ", "size",
-    "DEX", "dexterity",
-    "APP", "appearance",
-    "INT", "intelligence",
-    "POW", "power", "willpower"
-    "EDU", "education",
-    "LUC", "luck"
-]
+characteristicDefaults = {
+    "STR": 0,
+    "CON": 0,
+    "SIZ": 0,
+    "DEX": 0,
+    "APP": 0,
+    "INT": 0,
+    "POW": 0,
+    "EDU": 0,
+    "LUC": 0
+}
 
 skillDefaults = {
-    "Art1": 05,
-    "Art2": 05,
-    "Art3": 05,
+    "Art1": 5,
+    "Art2": 5,
+    "Art3": 5,
     "Athletics": 20,
     "Business": 20,
     "City Sense": 10,
-    "Conspiracy": 05,
-    "Dodge": 00,
+    "Conspiracy": 5,
+    "Dodge": 0,
     "Drive": 20,
-    "Electronics": 01,
-    "Fast Talk": 05,
+    "Electronics": 1,
+    "Fast Talk": 5,
     "Fighting": 10,
     "Firearms": 10,
     "First Aid": 25,
     "History": 20,
-    "Insight": 05,
+    "Insight": 5,
     "Internet Use": 20,
     "Intimidate": 15,
-    "Language1": 01,
-    "Language2": 01,
-    "Language3": 01,
-    "Life Sciences": 01,
+    "Language1": 1,
+    "Language2": 1,
+    "Language3": 1,
+    "Life Sciences": 1,
     "Listen": 25,
     "Mathematics": 15,
     "Mechanics": 10,
     "Media": 10,
     "Notice": 25,
     "Persuade": 25,
-    "Physical Sciences": 01,
-    "Pilot": 01,
-    "Programming": 05,
+    "Physical Sciences": 1,
+    "Pilot": 1,
+    "Programming": 5,
     "Search": 25,
-    "Sleight of Hand": 05,
-    "Sneak": 05,
-    "Social Sciences": 01,
-    "Skill1": 00,
-    "Skill2": 00,
-    "Skill3": 00,
-    "Skill4": 00,
-    "Credit Rating": 00,
-    "Mythos": 00
-}
-
-damagebonusDefaults = { # STR + SIZ
-    2: "-2",
-    65: "-1",
-    85: "0",
-    125: "1d4",
-    165: "1d6"
-}
-
-statDefaults = {
-    "HP": 00,
-    "Unconscious": False,
-    "Major Wound": False,
-    "SAN": 00,
-    "Temporarily Insane": False,
-    "Indefinitely Insane": False,
-    "MP": 00,
-    "STRESS": 00
+    "Sleight of Hand": 5,
+    "Sneak": 5,
+    "Social Sciences": 1,
+    "Skill1": 0,
+    "Skill2": 0,
+    "Skill3": 0,
+    "Skill4": 0,
+    "Credit Rating": 0,
+    "Mythos": 0
 }
 
 @bot.event
@@ -102,10 +83,13 @@ async def on_ready():
 async def roll(ctx, *diceStrings):
     diceString = ""
     if (len(diceStrings) == 0): 
-        diceString = "2d6"
+        diceString = "1d100"
     else:
+        if (diceStrings[0] in skillDefaults.keys()):
+            await roll_stat()
+            return
         if (re.search(r"^\d*[dD]\d+", diceStrings[0]) == None):
-            diceString = "2d6"
+            diceString = "1d100"
         else:
             diceString = diceStrings[0]
             diceStrings = diceStrings[1:]
@@ -127,7 +111,9 @@ async def register(ctx, arg:str = ""):
             await ctx.send("`Already registered`")
         else:
             post = {"_id": ctx.message.author.id,
-                # ADD VALUES HERE
+                "Name": "",
+                "Stats": json.dumps(characteristicDefaults),
+                "Skills": json.dumps(skillDefaults)
                 }
             collection.insert_one(post)
             await ctx.send("`Registered!`")
@@ -135,7 +121,9 @@ async def register(ctx, arg:str = ""):
         if (await check_registration(ctx)):
             collection.delete_one({"_id": ctx.message.author.id})
             post = {"_id": ctx.message.author.id, 
-                # ADD VALUES HERE
+                "Name": "",
+                "Stats": json.dumps(characteristicDefaults),
+                "Skills": json.dumps(skillDefaults)
                 }
             collection.insert_one(post)
             await ctx.send("`Registration reset`")
@@ -149,9 +137,14 @@ async def register(ctx, arg:str = ""):
 @bot.command()
 async def character(ctx, arg:str = ""):
     if (await check_registration(ctx)):
-        # TODO
-        await ctx.send("```Name: " + n + "\nHarm: " + h + " / 6\n Move: " + m + "\n Power: " + p + \
-            "\n Thought: " + t + "\n Wonder: " + w + "\n Charm: " + c + "```")
+        n = await find_value(ctx, "Name", True)
+        c = json.loads(await find_value(ctx, "Stats", True))
+        s = json.loads(await find_value(ctx, "Skills", True))
+        statblock = f"Name: {n}\nSTR: {c['STR']}\tDEX: {c['DEX']}\tPOW: {c['POW']}\nCON: {c['CON']}\tAPP: {c['APP']}\tEDU: {c['EDU']}\nSIZ: {c['SIZ']}\tINT: {c['INT']}\tLUC: {c['LUC']}\n"
+        skillBlock = f""
+        for skill in s.keys():
+            skillBlock += f"{skill}: {s[skill]}\n"
+        await ctx.send("```"+statblock+skillBlock+"```")
 
 async def check_registration(ctx, suppressOutput = False):
     if (collection.count_documents({"_id": ctx.message.author.id}) == 0):
@@ -237,61 +230,8 @@ async def name(ctx, *args:str):
                 return
 
 @bot.command()
-async def harm(ctx, *args:str):
-    key = "Harm"
-    if (len(args) == 0): 
-        arg = ""
-    else: 
-        arg = " ".join(args)
-    arg = arg.strip()
-    if (await check_registration(ctx)):
-        if (arg == ""):
-            await ctx.send("Harm: " + await find_value(ctx, key, True) + " / 6")
-        elif (arg == "$RESET"):
-            await reset_value(ctx, key)
-        elif (re.match(r"^\=\s?\d+$", arg)):
-            arg = arg.strip("=")
-            harm = clamp(int(arg), 0, 6)
-            await set_value(ctx, key, harm)
-        elif (re.match(r"^\+\s?\d+$", arg)):
-            arg = arg.strip("+")
-            harm = await find_value(ctx, key)
-            harm += int(arg)
-            harm = clamp(harm, 0, 6)
-            await set_value(ctx, key, harm)
-        elif (re.match(r"^\-\s?\d+$", arg)):
-            arg = arg.strip("-")
-            harm = await find_value(ctx, key)
-            harm -= int(arg)
-            harm = clamp(harm, 0, 6)
-            await set_value(ctx, key, harm)
-        else:
-            await ctx.send("`Invalid harm command`")
-            return
-
-@bot.command()
 async def move(ctx, *arg:str):
     key = "Move"
-    await roll_stat(ctx, key, arg)
-
-@bot.command()
-async def power(ctx, *arg:str):
-    key = "Power"
-    await roll_stat(ctx, key, arg)
-
-@bot.command()
-async def thought(ctx, *arg:str):
-    key = "Thought"
-    await roll_stat(ctx, key, arg)
-
-@bot.command()
-async def wonder(ctx, *arg:str):
-    key = "Wonder"
-    await roll_stat(ctx, key, arg)
-
-@bot.command()
-async def charm(ctx, *arg:str):
-    key = "Charm"
     await roll_stat(ctx, key, arg)
 
 bot.run(TOKEN)
