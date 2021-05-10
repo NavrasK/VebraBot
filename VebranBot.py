@@ -43,6 +43,7 @@ async def roll(ctx, *diceStrings):
     except Exception:
         await ctx.send("`Invalid roll command`")
         return
+    if (diceString == "2d6" and ("[1, 1]" in result or "[6, 6]" in result)): result += " >> CRIT"
     await ctx.send(ctx.message.author.mention + " - " + result)
 
 @bot.command()

@@ -1,6 +1,6 @@
 import random, re
 
-def roll(diceString):
+def roll(diceString, objectReturn = False):
     resultString = ""
     rolls = ""
     diceString = re.sub(r"\s*", "", diceString)
@@ -49,6 +49,7 @@ def roll(diceString):
         else:
             raise Exception("Invalid token: " + token)
     result = eval(rolls)
+    if (objectReturn): return [diceString, resultString, int(result)]
     display = "`" + diceString + "`: " + resultString + " = **" + str(result) + "**"
     if (len(display) > 2000): display = "`" + diceString + "`: " + " = **" + str(result) + "**"
     return display
