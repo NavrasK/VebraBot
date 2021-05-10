@@ -31,9 +31,7 @@ characteristicDefaults = {
 }
 
 skillDefaults = {
-    "Art1": 5,
-    "Art2": 5,
-    "Art3": 5,
+    "Art": 5,
     "Athletics": 20,
     "Business": 20,
     "City Sense": 10,
@@ -49,9 +47,7 @@ skillDefaults = {
     "Insight": 5,
     "Internet Use": 20,
     "Intimidate": 15,
-    "Language1": 1,
-    "Language2": 1,
-    "Language3": 1,
+    "Language": 1,
     "Life Sciences": 1,
     "Listen": 25,
     "Mathematics": 15,
@@ -66,43 +62,61 @@ skillDefaults = {
     "Sleight of Hand": 5,
     "Sneak": 5,
     "Social Sciences": 1,
-    "Skill1": 0,
-    "Skill2": 0,
-    "Skill3": 0,
-    "Skill4": 0,
     "Credit Rating": 0,
-    "Mythos": 0
+    "Mythos": 0,
+    "Sanity": 99
 }
+
+rollable = [
+    "str", "strength", 
+    "con", "constitution", 
+    "siz", "size", 
+    "dex", "dexterity",
+    "app", "appearance", 
+    "int", "intelligence", "idea", 
+    "pow", "power", "willpower",
+    "edu", "education", "know",
+    "luc", "luck",
+    "art", "craft", 
+    "athletics",
+    "business",
+    "city sense", "city", "cs",
+    "conspiracy",
+    "dodge",
+    "drive",
+    "electronics",
+    "fast talk", "fast", "ft",
+    "fighting", "punch", "kick",
+    "firearms", "shoot",
+    "first aid", "first", "heal", "fa",
+    "history",
+    "insight",
+    "internet use", "internet", "google", "iu",
+    "intimidate",
+    "language", "english",
+    "life sciences", "life", "ls",
+    "listen",
+    "mathematics", "math", 
+    "mechanics",
+    "media",
+    "notice",
+    "persuade",
+    "physical sciences", "physical", "ps", 
+    "pilot", 
+    "programming", "code", 
+    "search",
+    "sleight of hand", "sleight", "soh", 
+    "sneak",
+    "social sciences", "social", "ss", 
+    "credit rating", "credit", "cr", 
+    "mythos", 
+    "sanity"
+]
 
 @bot.event
 async def on_ready():
     print("Logged in as " + bot.user.name + " [#" + str(bot.user.id) + "] > CONFIDENTIAL")
     CharacterGenerator.read_names()
-
-@bot.command()
-async def roll(ctx, *diceStrings):
-    diceString = ""
-    if (len(diceStrings) == 0): 
-        diceString = "1d100"
-    else:
-        if (diceStrings[0] in skillDefaults.keys()):
-            await roll_stat()
-            return
-        if (re.search(r"^\d*[dD]\d+", diceStrings[0]) == None):
-            diceString = "1d100"
-        else:
-            diceString = diceStrings[0]
-            diceStrings = diceStrings[1:]
-        for ds in diceStrings:
-            if (re.search(r"^[-+*/]", ds) == None):
-                diceString += "+"
-            diceString += ds
-    try:
-        result = DiceRoll.roll(diceString)
-    except Exception:
-        await ctx.send("`Invalid roll command`")
-        return
-    await ctx.send(ctx.message.author.mention + " - " + result)
 
 @bot.command()
 async def register(ctx, arg:str = ""):
@@ -169,69 +183,35 @@ async def set_value(ctx, key, val, suppressOutput = False):
     if (suppressOutput == False):
         await ctx.send("`" + key + " set to " + str(val) + "`")
 
-async def reset_value(ctx, key):
-    if (key == "Name"):
-        await set_value(ctx, key, "", True)
+@bot.command()
+async def roll(ctx, *args):
+    diceString = ""
+    if (len(args) == 0): diceString = "1d100"
     else:
-        await set_value(ctx, key, 0, True)
-    await ctx.send("`" + key + " reset`")
-
-async def roll_stat(ctx, stat, args):
-    if (len(args) == 0): 
-        arg = ""
-    else: 
-        arg = " ".join(args)
-    if (await check_registration(ctx)):
-        arg = arg.strip()
-        if (arg.split(" ", 1)[0] == "$SET"):
-            try:
-                val = int(arg.split(" ", 1)[1])
-            except Exception:
-                await ctx.send("`Invalid " + stat.lower() + " command`")
-                return
-            await set_value(ctx, stat, val)
-        elif (arg == "$RESET"):
-            await reset_value(ctx, stat)
+        if (re.search(r"^\d*[dD]\d+", args[0]) == None): diceString = "1d100"
         else:
-            mod = await find_value(ctx, stat)
-            arg = re.sub(r"\s*", "", arg)
-            diceString="2d6" + ("-" if mod < 0 else "+") + str(abs(mod)) + \
-                ("+" if (arg != "" and (arg[0] != "+" and arg[0] != "-")) else "") + arg
-            try:
-                result = DiceRoll.roll(diceString)
-            except Exception:
-                await ctx.send("`Invalid " + stat.lower() + " command`")
-                return
-            await ctx.send(ctx.message.author.mention + " - " + await find_value(ctx, "Name", True) + ": " + stat + "\n" + result)
-
-def clamp(n, minimum, maximum):
-    return (max(min(n, maximum), minimum))
+            diceString = args[0]
+            args = args[1:]
+        for ds in args:
+            if (re.search(r"^[-+*/]", ds) == None): diceString += "+"
+            diceString += ds
+    try:
+        result = DiceRoll.roll(diceString)
+    except Exception:
+        await ctx.send("`Invalid roll command`")
+        return
+    await ctx.send(ctx.message.author.mention + " - " + result)
 
 @bot.command()
-async def name(ctx, *args:str):
-    key = "Name"
-    if (len(args) == 0): 
-        arg = ""
-    else: 
-        arg = " ".join(args)
-    arg = arg.strip()
-    if (await check_registration(ctx)):
-        if (arg == ""):
-            await ctx.send("Name: " + await find_value(ctx, key, True))
-        elif (arg == "$RESET"):
-            await reset_value(ctx, key)
-        else:
-            args = arg.split(" ", 1)
-            if (args[0] == "$SET"):
-                name = str(args[1])
-                await set_value(ctx, key, name)
-            else:
-                await ctx.send("`Invalid name command`")
-                return
-
-@bot.command()
-async def move(ctx, *arg:str):
-    key = "Move"
-    await roll_stat(ctx, key, arg)
+async def r(ctx, *args:str):
+    if (len(args) == 0): await roll(ctx, "1d100")
+    elif (args[0] == "set"):
+        pass #TODO: set or modify value
+    elif (args[0] == "$AUTOFILL"):
+        pass #TODO: read in special string that sets name, characteristics, and skills, adding custom skills
+    elif (args[0] in rollable):
+        pass #TODO: fetch value, roll, and output result (level of success, crits)
+    else:
+        await ctx.send("`Invalid command`")
 
 bot.run(TOKEN)
