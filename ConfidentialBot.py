@@ -17,8 +17,6 @@ description = "Bot designed for Call of Cthulhu Confidential"
 bot = commands.Bot(command_prefix="//", description=description)
 random.seed()
 
-playerDict = {}
-
 characteristicDefaults = {
     "STR": 0,
     "CON": 0,
@@ -71,6 +69,7 @@ skillDefaults = {
 
 rollable = list(characteristicDefaults.keys()) + list(skillDefaults.keys())
 async def getStat(val):
+    if len(val) == 0: return None
     return process.extractOne(val, rollable)[0]
 
 @bot.event
@@ -173,6 +172,9 @@ async def sets(ctx, *args:str):
             await ctx.send("`Invalid set value`")
             return
         stat = await getStat(" ".join(args[:-1]))
+        if stat == None:
+            await ctx.send("`Invalid sets command`")
+            return
         if (stat in characteristicDefaults.keys()): target = "Stats"
         elif (stat in skillDefaults.keys()): target = "Skills"
         else:
@@ -226,6 +228,9 @@ async def r(ctx, *args:str):
                     continue
                 mod += tempmod
         skill = await getStat(skill)
+        if skill == None:
+            await ctx.send("`Invalid roll command`")
+            return
         
         if skill in list(characteristicDefaults.keys()): target = int(json.loads(await find_value(ctx, "Stats", True))[skill])
         else: target = int(json.loads(await find_value(ctx, "Skills", True))[skill])
@@ -248,8 +253,8 @@ async def r(ctx, *args:str):
                 trueVal = res[2]
                 trueInd = i
         
-        if (mod > 0): skillprint = skill + " +" + str(mod)
-        elif (mod < 0): skillprint = skill + " -" + str(mod)
+        if (mod > 0): skillprint = skill + " +" + str(abs(mod))
+        elif (mod < 0): skillprint = skill + " -" + str(abs(mod))
         else: skillprint = skill
         output = f"{ctx.message.author.mention} - {await find_value(ctx, 'Name', True)}: {skillprint} ({target} / {target_hard} / {target_extreme})"
         if (abs(advantage) != 0): output += f"\n`{'DIS' if advantage < 0 else ''}ADVANTAGE x {abs(advantage)}`: "
