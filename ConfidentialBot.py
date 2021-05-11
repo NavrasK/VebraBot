@@ -2,7 +2,6 @@ import os, discord, random, re, pymongo, uuid, json, math
 from discord.ext import commands
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 import DiceRoll
 
@@ -29,7 +28,8 @@ characteristicDefaults = {
     "INT": 0,
     "POW": 0,
     "EDU": 0,
-    "LUC": 0
+    "LUC": 0,
+    "SAN": 100
 }
 
 skillDefaults = {
@@ -38,6 +38,7 @@ skillDefaults = {
     "Business": 20,
     "City Sense": 10,
     "Conspiracy": 5,
+    "Credit Rating": 0,
     "Dodge": 0,
     "Drive": 20,
     "Electronics": 1,
@@ -55,6 +56,7 @@ skillDefaults = {
     "Mathematics": 15,
     "Mechanics": 10,
     "Media": 10,
+    "Mythos": 0,
     "Notice": 25,
     "Persuade": 25,
     "Physical Sciences": 1,
@@ -64,10 +66,7 @@ skillDefaults = {
     "Sleight Of Hand": 5,
     "Sneak": 5,
     "Social Sciences": 1,
-    "Custom": 0,
-    "Credit Rating": 0,
-    "Mythos": 0,
-    "Sanity": 99
+    "Custom": 0
 }
 
 rollable = list(characteristicDefaults.keys()) + list(skillDefaults.keys())
@@ -117,8 +116,7 @@ async def find_value(ctx, key, castToString = False):
 
 async def set_value(ctx, key, val, suppressOutput = False):
     collection.update_one({"_id": ctx.message.author.id}, {"$set": {key: val}})
-    if (suppressOutput == False):
-        await ctx.send("`" + key + " set to " + str(val) + "`")
+    if (suppressOutput == False): await ctx.send("`" + key + " set to " + str(val) + "`")
 
 @bot.command()
 async def character(ctx, arg:str = ""):
@@ -127,11 +125,17 @@ async def character(ctx, arg:str = ""):
         c = json.loads(await find_value(ctx, "Stats", True))
         s = json.loads(await find_value(ctx, "Skills", True))
         statBlock = f"Name: {n}\nSTR: {c['STR']}\tDEX: {c['DEX']}\tPOW: {c['POW']}\n"
-        statBlock += f"CON: {c['CON']}\tAPP: {c['APP']}\tEDU: {c['EDU']}\nSIZ: {c['SIZ']}\tINT: {c['INT']}\tLUC: {c['LUC']}\n"
+        statBlock += f"CON: {c['CON']}\tAPP: {c['APP']}\tEDU: {c['EDU']}\n"
+        statBlock += f"SIZ: {c['SIZ']}\tINT: {c['INT']}\tLUC: {c['LUC']}\nSanity: {c['SAN']}\n\n"
         skillBlock = f""
         for skill in s.keys():
             skillBlock += f"{skill}: {s[skill]}\n"
-        await ctx.send("```"+statBlock+skillBlock+"```")
+        with open("_tempchar.txt", "w") as file: 
+            file.write(f"{statBlock}{skillBlock}")
+        filename = "_".join(n.split(" ")) + ".txt"
+        with open("_tempchar.txt", "rb") as file: 
+            await ctx.send(f"{ctx.message.author.mention} - {n}", file=discord.File(file, filename))
+        if os.path.exists("_tempchar.txt"): os.remove("_tempchar.txt")
 
 @bot.command()
 async def roll(ctx, *args):
@@ -153,9 +157,43 @@ async def roll(ctx, *args):
     await ctx.send(ctx.message.author.mention + " - " + result)
 
 @bot.command()
-async def setval(ctx, *args:str):
+async def sets(ctx, *args:str):
     if (await check_registration(ctx)):
-        pass #TODO: set / modify skills and characteristics
+        if (len(args) < 2):
+            await ctx.send("`Invalid set command`")
+            return
+        target = "Name"
+        if (args[0].lower() == "name"):
+            charname = " ".join(args[1:])
+            await set_value(ctx, target, charname)
+            return
+        try:
+            newval = int(args[-1])
+        except ValueError:
+            await ctx.send("`Invalid set value`")
+            return
+        stat = await getStat(" ".join(args[:-1]))
+        if (stat in characteristicDefaults.keys()): target = "Stats"
+        elif (stat in skillDefaults.keys()): target = "Skills"
+        else:
+            await ctx.send("`Invalid set command`")
+            return
+        oldvals = json.loads(await find_value(ctx, target, True))
+        output = f"{ctx.message.author.mention} - {await find_value(ctx, 'Name', True)}: \n{stat}: "
+        if (args[-1][0] == "-" or args[-1][0] == "+"): 
+            output += f"{oldvals[stat]} {'+' if newval >= 0 else '-'} {abs(newval)} -> **{oldvals[stat] + newval}**"
+            oldvals[stat] += newval
+        else: 
+            output += f"{oldvals[stat]} -> **{newval}**"
+            oldvals[stat] = newval
+        if (oldvals[stat] > 100): 
+            oldvals[stat] = 100
+            output += " (clamped to 100)"
+        elif (oldvals[stat] < 0):
+            oldvals[stat] = 0
+            output += " (clamped to 0)"
+        await set_value(ctx, target, json.dumps(oldvals), True)
+        await ctx.send(output)
 
 async def getOutcome(val, t1, t2, t5, fumble):
     if val >= fumble: outcome = "FUMBLE!" 
