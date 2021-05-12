@@ -212,6 +212,16 @@ async def r(ctx, *args:str):
         await roll(ctx, "1d100")
         return
     
+    if (args[0].lower() == "stress"):
+        diceString = "1d6" + " ".join(args[1:])
+        try:
+            result = DiceRoll.roll(diceString)
+        except Exception:
+            await ctx.send("`Invalid stress roll`")
+            return
+        await ctx.send(ctx.message.author.mention + " - STRESS " + result)
+        return
+
     if (await check_registration(ctx)):
         advantage = 0
         mod = 0
