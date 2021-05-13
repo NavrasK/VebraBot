@@ -2,7 +2,7 @@ import os, discord, random, re, pymongo, uuid
 from discord.ext import commands
 from dotenv import load_dotenv
 from pymongo import MongoClient
-
+from fuzzywuzzy import process
 import CharacterGenerator
 import DiceRoll
 
@@ -18,10 +18,27 @@ description = "Bot designed for the Vebra RPG"
 bot = commands.Bot(command_prefix="//", description=description)
 random.seed()
 
+skills = ["move", "power", "thought", "wonder", "charm"]
+
 @bot.event
 async def on_ready():
     print("Logged in as " + bot.user.name + " [#" + str(bot.user.id) + "]")
     CharacterGenerator.read_names()
+
+@bot.event
+async def on_command_error(ctx, error):
+    args = re.split(r"([-+*/])", ctx.invoked_with)
+    cmd = args[0].lower()
+    mod = args[1:] if len(args) > 1 else []
+    if (ctx.view.index < ctx.view.end):
+        mod.extend(ctx.view.buffer[ctx.view.index:].strip().split(" "))
+    if (cmd not in skills):
+        guess = process.extractOne(cmd, skills)
+        if guess[1] > 85: cmd = guess[0]
+    if (cmd in skills):
+        await roll_stat(ctx, cmd.title(), mod)
+    else:
+        print(error)
 
 @bot.command()
 async def roll(ctx, *diceStrings):
@@ -43,7 +60,6 @@ async def roll(ctx, *diceStrings):
     except Exception:
         await ctx.send("`Invalid roll command`")
         return
-    if (diceString == "2d6" and ("[1, 1]" in result or "[6, 6]" in result)): result += " >> CRIT"
     await ctx.send(ctx.message.author.mention + " - " + result)
 
 @bot.command()
@@ -159,7 +175,11 @@ async def roll_stat(ctx, stat, args):
             except Exception:
                 await ctx.send("`Invalid " + stat.lower() + " command`")
                 return
-            await ctx.send(ctx.message.author.mention + " - " + await find_value(ctx, "Name", True) + ": " + stat + "\n" + result)
+            # To test crits, paste the next line into DiceRoll.py before it creates the display
+            # resultString = re.sub(r"\[....\]", "[1, 1]", resultString)
+            if ("[1, 1]" in result and mod <= 1): result += " >> CRITICAL FAIL"
+            elif ("[6, 6]" in result and mod >= 0): result += " >> CRITICAL SUCCESS"
+            await ctx.send(f"{ctx.message.author.mention} - {await find_value(ctx, 'Name', True)}: {stat} ({mod})\n{result}")
 
 def clamp(n, minimum, maximum):
     return (max(min(n, maximum), minimum))
