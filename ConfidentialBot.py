@@ -2,7 +2,7 @@ import os, discord, random, re, pymongo, uuid, json, math
 from discord.ext import commands
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from fuzzywuzzy import fuzz, process
+from fuzzywuzzy import process
 import DiceRoll
 
 load_dotenv()
@@ -82,18 +82,12 @@ async def getStat(val, returnConfidence = False):
 async def on_command_error(ctx, error):
     args = ctx.invoked_with.split(" ")
     if (ctx.view.index < ctx.view.end): args.extend(ctx.view.buffer[ctx.view.index:].strip().split(" "))
-    tempVal = []
-    for arg in args:
-        if arg == "a" or arg == "-a" or arg == "+a": continue
-        if arg == "d" or arg == "-d" or arg == "+d": continue
-        if arg == "+" or arg == "-" or arg == "*" or arg == "/": continue
-        try:
-            int(arg)
-        except ValueError:
-            tempVal.append(arg.strip().lower())
-    tempSkill = " ".join(tempVal)
-    guess = await getStat(tempSkill, True)
-    if guess == None or guess[1] < 80: print(error)
+    if (len(args[0]) < 3): 
+        print(error)
+        return
+    guess = await getStat(args[0], True)
+    if guess == None: print(error)
+    elif guess[1] < 80: print(error)
     else: await r(ctx, *args)
 
 @bot.event
