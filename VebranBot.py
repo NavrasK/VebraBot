@@ -10,7 +10,7 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CONNECTION = os.getenv('CLUSTER_URL')
 
-cluster = MongoClient(CONNECTION)
+cluster = MongoClient(CONNECTION+"?ssl=true&ssl_cert_reqs=CERT_NONE")
 db = cluster["Vebra"]
 collection = db["Player_Characters"]
 
