@@ -177,8 +177,8 @@ async def roll_stat(ctx, stat, args):
                 return
             # To test crits, paste the next line into DiceRoll.py before it creates the display
             # resultString = re.sub(r"\[....\]", "[1, 1]", resultString)
-            if ("[1, 1]" in result and mod <= 1): result += " >> CRITICAL FAIL"
-            elif ("[6, 6]" in result and mod >= 0): result += " >> CRITICAL SUCCESS"
+            if ("[1, 1]" in result): result += " >> CRITICAL FAIL"
+            elif ("[6, 6]" in result): result += " >> CRITICAL SUCCESS"
             await ctx.send(f"{ctx.message.author.mention} - {await find_value(ctx, 'Name', True)}: {stat} ({mod})\n{result}")
 
 def clamp(n, minimum, maximum):
